@@ -1,5 +1,4 @@
 import { ProductModel, ProductDoc } from "../models/product.model";
-import { UserModel } from "../models/user.model";
 import type { ProductType } from "../types/product.type";
 
 type ProductQueryArgs = {
@@ -57,7 +56,6 @@ export interface IProductRepository {
 
 export class ProductRepository implements IProductRepository {
   async createProduct(productData: Partial<ProductType>): Promise<ProductDoc> {
-    // ✅ ensure these fields start clean (prevent admin setting them manually)
     const safeData: Partial<ProductType> = {
       ...productData,
       ratings: [],

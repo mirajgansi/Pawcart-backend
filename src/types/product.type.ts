@@ -37,7 +37,9 @@ const CommentSchema = z.object({
 /** Only required for "food" */
 const FoodAttributesSchema = z.object({
   productCategory: z.literal("food"),
-  nutritionalInfo: z.string().min(1, "Nutritional info is required for food products"),
+  nutritionalInfo: z
+    .string()
+    .min(1, "Nutritional info is required for food products"),
   manufactureDate: z.string().optional().nullable(),
   expireDate: z.string().optional().nullable(),
 });
@@ -66,19 +68,32 @@ export const ACCESSORY_COLORS = [
   "brown",
 ] as const;
 
-export const ACCESSORY_MATERIALS = ["nylon", "leather", "cotton", "polyester", "rubber", "metal"] as const;
+export const ACCESSORY_MATERIALS = [
+  "nylon",
+  "leather",
+  "cotton",
+  "polyester",
+  "rubber",
+  "metal",
+] as const;
 
 export const ACCESSORY_SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
 
 /** Required for "accessories" */
 const AccessoryAttributesSchema = z.object({
   productCategory: z.literal("accessories"),
-  pattern: z.enum(ACCESSORY_PATTERNS, { message: "Pattern is required for accessories" }),
+  pattern: z.enum(ACCESSORY_PATTERNS, {
+    message: "Pattern is required for accessories",
+  }),
   colors: z
     .array(z.enum(ACCESSORY_COLORS))
     .min(1, "At least one color is required"),
-  material: z.enum(ACCESSORY_MATERIALS, { message: "Material is required for accessories" }),
-  size: z.enum(ACCESSORY_SIZES, { message: "Size is required for accessories" }),
+  material: z.enum(ACCESSORY_MATERIALS, {
+    message: "Material is required for accessories",
+  }),
+  size: z.enum(ACCESSORY_SIZES, {
+    message: "Size is required for accessories",
+  }),
   nutritionalInfo: z.string().optional().nullable(),
   manufactureDate: z.string().optional().nullable(),
   expireDate: z.string().optional().nullable(),
@@ -93,31 +108,69 @@ export const TOY_PATTERNS = [
 ] as const;
 
 export const TOY_COLORS = ACCESSORY_COLORS; // reuse same palette
-export const TOY_MATERIALS = ["nylon", "rubber", "plush", "rope", "latex", "plastic"] as const;
+export const TOY_MATERIALS = [
+  "nylon",
+  "rubber",
+  "plush",
+  "rope",
+  "latex",
+  "plastic",
+] as const;
 export const TOY_SIZES = ACCESSORY_SIZES;
 
 /** Required for "toys" */
 const ToyAttributesSchema = z.object({
   productCategory: z.literal("toys"),
   pattern: z.enum(TOY_PATTERNS, { message: "Pattern is required for toys" }),
-  colors: z
-    .array(z.enum(TOY_COLORS))
-    .min(1, "At least one color is required"),
+  colors: z.array(z.enum(TOY_COLORS)).min(1, "At least one color is required"),
   material: z.enum(TOY_MATERIALS, { message: "Material is required for toys" }),
   size: z.enum(TOY_SIZES, { message: "Size is required for toys" }),
+  nutritionalInfo: z.string().optional().nullable(),
   manufactureDate: z.string().optional().nullable(),
+  expireDate: z.string().optional().nullable(),
 });
 
-export const GROOMING_SKIN_TYPES = ["all", "sensitive", "dry", "oily", "normal"] as const;
-export const GROOMING_COAT_TYPES = ["short", "long", "curly", "double-coat", "wire-haired", "all"] as const;
-export const GROOMING_SCENTS = ["unscented", "lavender", "citrus", "mint", "oatmeal", "coconut"] as const;
-export const GROOMING_VOLUMES = ["50ml", "100ml", "200ml", "250ml", "500ml", "1L"] as const;
+export const GROOMING_SKIN_TYPES = [
+  "all",
+  "sensitive",
+  "dry",
+  "oily",
+  "normal",
+] as const;
+export const GROOMING_COAT_TYPES = [
+  "short",
+  "long",
+  "curly",
+  "double-coat",
+  "wire-haired",
+  "all",
+] as const;
+export const GROOMING_SCENTS = [
+  "unscented",
+  "lavender",
+  "citrus",
+  "mint",
+  "oatmeal",
+  "coconut",
+] as const;
+export const GROOMING_VOLUMES = [
+  "50ml",
+  "100ml",
+  "200ml",
+  "250ml",
+  "500ml",
+  "1L",
+] as const;
 
 /** Required for "grooming" */
 const GroomingAttributesSchema = z.object({
   productCategory: z.literal("grooming"),
-  skinType: z.enum(GROOMING_SKIN_TYPES, { message: "Skin type is required for grooming products" }),
-  coatType: z.enum(GROOMING_COAT_TYPES, { message: "Coat type is required for grooming products" }),
+  skinType: z.enum(GROOMING_SKIN_TYPES, {
+    message: "Skin type is required for grooming products",
+  }),
+  coatType: z.enum(GROOMING_COAT_TYPES, {
+    message: "Coat type is required for grooming products",
+  }),
   scent: z.enum(GROOMING_SCENTS).optional(),
   volume: z.enum(GROOMING_VOLUMES).optional(),
   isHypoallergenic: z.boolean().default(false),
@@ -174,7 +227,10 @@ const BaseProductSchema = z.object({
 
 // ─── Final merged schema ──────────────────────────────────────────────────────
 
-export const ProductSchema = z.intersection(BaseProductSchema, CategoryAttributesSchema);
+export const ProductSchema = z.intersection(
+  BaseProductSchema,
+  CategoryAttributesSchema,
+);
 
 export type ProductType = z.infer<typeof ProductSchema>;
 
@@ -182,9 +238,13 @@ export type ProductType = z.infer<typeof ProductSchema>;
 
 type BaseProduct = z.infer<typeof BaseProductSchema>;
 
-export type FoodProduct      = BaseProduct & z.infer<typeof FoodAttributesSchema>;
-export type AccessoryProduct = BaseProduct & z.infer<typeof AccessoryAttributesSchema>;
-export type ToyProduct       = BaseProduct & z.infer<typeof ToyAttributesSchema>;
-export type GroomingProduct  = BaseProduct & z.infer<typeof GroomingAttributesSchema>;
-export type HousingProduct   = BaseProduct & { productCategory: "housing" };
-export type HealthCareProduct= BaseProduct & { productCategory: "health-care" };
+export type FoodProduct = BaseProduct & z.infer<typeof FoodAttributesSchema>;
+export type AccessoryProduct = BaseProduct &
+  z.infer<typeof AccessoryAttributesSchema>;
+export type ToyProduct = BaseProduct & z.infer<typeof ToyAttributesSchema>;
+export type GroomingProduct = BaseProduct &
+  z.infer<typeof GroomingAttributesSchema>;
+export type HousingProduct = BaseProduct & { productCategory: "housing" };
+export type HealthCareProduct = BaseProduct & {
+  productCategory: "health-care";
+};
