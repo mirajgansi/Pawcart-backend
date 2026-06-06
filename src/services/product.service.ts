@@ -61,16 +61,19 @@ export class ProductService {
     if (!p) throw new HttpError(404, "Product not found");
     return p;
   }
+
   async getAllProducts({
     page,
     size,
     search,
     category,
+    productCategory, // 👈 added
   }: {
     page?: string;
     size?: string;
     search?: string;
     category?: string;
+    productCategory?: string; // 👈 added
   }) {
     const currentPage = page ? parseInt(page) : 1;
     const pageSize =
@@ -78,15 +81,21 @@ export class ProductService {
 
     const currentSearch = (search ?? "").trim();
     const currentCategory = (category ?? "").trim();
+    const currentProductCategory = (productCategory ?? "").trim(); // 👈 added
 
     const normalizedCategory =
       !currentCategory || currentCategory === "All" ? "" : currentCategory;
+    const normalizedProductCategory =
+      !currentProductCategory || currentProductCategory === "All"
+        ? ""
+        : currentProductCategory; // 👈 added
 
     const { products, total } = await productRepository.getAllProducts({
       page: currentPage,
       size: pageSize,
       search: currentSearch,
       category: normalizedCategory,
+      productCategory: normalizedProductCategory, // 👈 added
     });
 
     const pagination = {
@@ -103,6 +112,64 @@ export class ProductService {
     const clean = category?.trim();
     if (!clean) throw new HttpError(400, "Category is required");
     return productRepository.getProductsByCategory(clean);
+  }
+
+  async getProductsByProductCategory(productCategory: string) {
+    const clean = productCategory?.trim();
+    if (!clean) throw new HttpError(400, "Product category is required");
+    return productRepository.getProductsByProductCategory(clean);
+  }
+
+  // ── Per pet-category ───────────────────────────────────────────────────────
+
+  async getProductsByDogs(page: number = 1, size: number = 10) {
+    return productRepository.getProductsByDogs({ page, size });
+  }
+
+  async getProductsByCats(page: number = 1, size: number = 10) {
+    return productRepository.getProductsByCats({ page, size });
+  }
+
+  async getProductsByBirds(page: number = 1, size: number = 10) {
+    return productRepository.getProductsByBirds({ page, size });
+  }
+
+  async getProductsByFish(page: number = 1, size: number = 10) {
+    return productRepository.getProductsByFish({ page, size });
+  }
+
+  async getProductsByRabbits(page: number = 1, size: number = 10) {
+    return productRepository.getProductsByRabbits({ page, size });
+  }
+
+  async getProductsBySmallPets(page: number = 1, size: number = 10) {
+    return productRepository.getProductsBySmallPets({ page, size });
+  }
+
+  // ── Per product-category ───────────────────────────────────────────────────
+
+  async getProductsByFood(page: number = 1, size: number = 10) {
+    return productRepository.getProductsByFood({ page, size });
+  }
+
+  async getProductsByAccessories(page: number = 1, size: number = 10) {
+    return productRepository.getProductsByAccessories({ page, size });
+  }
+
+  async getProductsByHousing(page: number = 1, size: number = 10) {
+    return productRepository.getProductsByHousing({ page, size });
+  }
+
+  async getProductsByGrooming(page: number = 1, size: number = 10) {
+    return productRepository.getProductsByGrooming({ page, size });
+  }
+
+  async getProductsByToys(page: number = 1, size: number = 10) {
+    return productRepository.getProductsByToys({ page, size });
+  }
+
+  async getProductsByHealthCare(page: number = 1, size: number = 10) {
+    return productRepository.getProductsByHealthCare({ page, size });
   }
 
   // recently added
@@ -215,8 +282,6 @@ export class ProductService {
     const normalizedCategory =
       !currentCategory || currentCategory === "All" ? "" : currentCategory;
 
-    // ✅ easiest: reuse getAllProducts logic but with out-of-stock filter
-    // If you want cleaner, create repository method getOutOfStock(...)
     const { products, total } = await productRepository.getAllProducts({
       page: currentPage,
       size: pageSize,
@@ -228,7 +293,7 @@ export class ProductService {
     const pagination = {
       page: currentPage,
       size: pageSize,
-      total, // (optional) if you want correct total for out-of-stock, create repo method
+      total,
       totalPages: Math.ceil(total / pageSize),
     };
 
@@ -260,19 +325,26 @@ export class ProductService {
     return updated;
   }
 
-  async addComment(productId: string, userId: string, comment: string) {
+  async addComment(
+    productId: string,
+    userId: string,
+    username: string,
+    comment: string,
+  ) {
     const clean = (comment ?? "").trim();
     if (!clean) throw new HttpError(400, "Comment is required");
 
     const updated = await productRepository.addComment({
       productId,
       userId,
+      username,
       comment: clean,
     });
 
     if (!updated) throw new HttpError(404, "Product not found");
     return updated;
   }
+
   async getUserFavorites(userId: string) {
     if (!userId) {
       throw new HttpError(401, "Unauthorized");
@@ -280,6 +352,7 @@ export class ProductService {
 
     return productRepository.getUserFavorites(userId);
   }
+
   async getProductComments(productId: string) {
     const comments = await productRepository.getProductComments(productId);
     if (!comments) throw new HttpError(404, "Product not found");

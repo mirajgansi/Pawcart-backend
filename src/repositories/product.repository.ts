@@ -1,11 +1,13 @@
 import { ProductModel, ProductDoc } from "../models/product.model";
 import type { ProductType } from "../types/product.type";
+import { PET_CATEGORIES, PRODUCT_CATEGORIES } from "../types/product.type";
 
 type ProductQueryArgs = {
   page: number;
   size: number;
   search?: string;
   category?: string;
+  productCategory?: string; // 👈 added
 };
 
 export interface IProductRepository {
@@ -38,6 +40,58 @@ export interface IProductRepository {
     size: number;
   }): Promise<{ products: ProductDoc[]; total: number }>;
 
+  // ── Per pet-category getters ─────────────────────────────────────────────
+  getProductsByDogs(args: {
+    page: number;
+    size: number;
+  }): Promise<{ products: ProductDoc[]; total: number }>;
+  getProductsByCats(args: {
+    page: number;
+    size: number;
+  }): Promise<{ products: ProductDoc[]; total: number }>;
+  getProductsByBirds(args: {
+    page: number;
+    size: number;
+  }): Promise<{ products: ProductDoc[]; total: number }>;
+  getProductsByFish(args: {
+    page: number;
+    size: number;
+  }): Promise<{ products: ProductDoc[]; total: number }>;
+  getProductsByRabbits(args: {
+    page: number;
+    size: number;
+  }): Promise<{ products: ProductDoc[]; total: number }>;
+  getProductsBySmallPets(args: {
+    page: number;
+    size: number;
+  }): Promise<{ products: ProductDoc[]; total: number }>;
+
+  // ── Per product-category getters ─────────────────────────────────────────
+  getProductsByFood(args: {
+    page: number;
+    size: number;
+  }): Promise<{ products: ProductDoc[]; total: number }>;
+  getProductsByAccessories(args: {
+    page: number;
+    size: number;
+  }): Promise<{ products: ProductDoc[]; total: number }>;
+  getProductsByHousing(args: {
+    page: number;
+    size: number;
+  }): Promise<{ products: ProductDoc[]; total: number }>;
+  getProductsByGrooming(args: {
+    page: number;
+    size: number;
+  }): Promise<{ products: ProductDoc[]; total: number }>;
+  getProductsByToys(args: {
+    page: number;
+    size: number;
+  }): Promise<{ products: ProductDoc[]; total: number }>;
+  getProductsByHealthCare(args: {
+    page: number;
+    size: number;
+  }): Promise<{ products: ProductDoc[]; total: number }>;
+
   rateProduct(args: {
     productId: string;
     userId: string;
@@ -50,26 +104,60 @@ export interface IProductRepository {
   addComment(args: {
     productId: string;
     userId: string;
+    username: string; // 👈 added
     comment: string;
   }): Promise<ProductDoc | null>;
 }
 
 export class ProductRepository implements IProductRepository {
+  // ─── Helpers ──────────────────────────────────────────────────────────────
+
+  /**
+   * Maps productCategory → the attribute field name that should be populated.
+   * Everything else gets nulled out by the pre-save hook, but we set the right
+   * one explicitly here so it's clear at the application layer too.
+   */
+  private resolveAttributeField(productCategory: string): string | null {
+    const map: Record<string, string> = {
+      food: "foodAttributes",
+      accessories: "accessoryAttributes",
+      toys: "toyAttributes",
+      grooming: "groomingAttributes",
+      housing: "genericAttributes",
+      "health-care": "genericAttributes",
+    };
+    return map[productCategory] ?? null;
+  }
+
+  // ─── CRUD ─────────────────────────────────────────────────────────────────
+
   async createProduct(productData: Partial<ProductType>): Promise<ProductDoc> {
-    const safeData: Partial<ProductType> = {
+    const { productCategory } = productData as any;
+
+    const safeData = {
       ...productData,
       ratings: [],
       favorites: [],
       comments: [],
       averageRating: 0,
       reviewCount: 0,
-    };
+      // Ensure all attribute blocks start as null;
+      // the pre-save hook will null out the irrelevant ones,
+      // but being explicit here avoids any ambiguity.
+      foodAttributes: null,
+      accessoryAttributes: null,
+      toyAttributes: null,
+      groomingAttributes: null,
+      genericAttributes: null,
+    } as any;
+
+    // Lift the category-specific attributes into the right field
+    const attrField = this.resolveAttributeField(productCategory);
+    if (attrField && (productData as any)[attrField]) {
+      safeData[attrField] = (productData as any)[attrField];
+    }
 
     return await ProductModel.create(safeData);
-  }
-
-  async getProductByName(name: string): Promise<ProductDoc | null> {
-    return await ProductModel.findOne({ name });
   }
 
   async getProductById(id: string): Promise<ProductDoc | null> {
@@ -77,10 +165,16 @@ export class ProductRepository implements IProductRepository {
       .populate("comments.userId", "username")
       .populate("ratings.userId", "username");
   }
+
+  async getProductByName(name: string): Promise<ProductDoc | null> {
+    return await ProductModel.findOne({ name });
+  }
+
   async updateProduct(
     id: string,
     updateData: Partial<ProductType>,
   ): Promise<ProductDoc | null> {
+    // Strip fields that should never be updated directly
     const {
       ratings,
       favorites,
@@ -92,6 +186,7 @@ export class ProductRepository implements IProductRepository {
 
     return await ProductModel.findByIdAndUpdate(id, safeUpdate, {
       new: true,
+      runValidators: true,
     }).populate("comments.userId", "username");
   }
 
@@ -100,7 +195,15 @@ export class ProductRepository implements IProductRepository {
     return !!result;
   }
 
-  async getAllProducts({ page, size, search, category }: ProductQueryArgs) {
+  // ─── Queries ──────────────────────────────────────────────────────────────
+
+  async getAllProducts({
+    page,
+    size,
+    search,
+    category,
+    productCategory, // 👈 new
+  }: ProductQueryArgs) {
     const skip = (page - 1) * size;
     const filter: any = {};
 
@@ -112,8 +215,14 @@ export class ProductRepository implements IProductRepository {
       ];
     }
 
+    // pet category  e.g. "dogs", "cats"
     if (category?.trim()) {
       filter.category = category.trim();
+    }
+
+    // product category  e.g. "food", "toys"
+    if (productCategory?.trim()) {
+      filter.productCategory = productCategory.trim();
     }
 
     const [products, total] = await Promise.all([
@@ -124,63 +233,120 @@ export class ProductRepository implements IProductRepository {
     return { products, total };
   }
 
-  async getProductsByCategory(category: string) {
-    const clean = category.trim();
+  async getProductsByCategory(category: string): Promise<ProductDoc[]> {
     return ProductModel.find({
-      category: { $regex: `^${clean}$`, $options: "i" },
+      category: { $regex: `^${category.trim()}$`, $options: "i" },
     }).sort({ createdAt: -1 });
   }
 
-  async getRecentlyAdded({ page, size }: { page: number; size: number }) {
+  async getProductsByProductCategory(
+    productCategory: string,
+  ): Promise<ProductDoc[]> {
+    return ProductModel.find({
+      productCategory: { $regex: `^${productCategory.trim()}$`, $options: "i" },
+    }).sort({ createdAt: -1 });
+  }
+
+  // ─── Curated lists ────────────────────────────────────────────────────────
+
+  private async paginatedQuery(
+    sort: Record<string, 1 | -1>,
+    { page, size }: { page: number; size: number },
+  ) {
     const skip = (page - 1) * size;
     const filter = { inStock: { $gt: 0 } };
 
     const [products, total] = await Promise.all([
-      ProductModel.find(filter).sort({ createdAt: -1 }).skip(skip).limit(size),
+      ProductModel.find(filter).sort(sort).skip(skip).limit(size),
       ProductModel.countDocuments(filter),
     ]);
 
     return { products, total };
   }
 
-  async getTrending({ page, size }: { page: number; size: number }) {
+  async getRecentlyAdded(args: { page: number; size: number }) {
+    return this.paginatedQuery({ createdAt: -1 }, args);
+  }
+
+  async getTrending(args: { page: number; size: number }) {
+    return this.paginatedQuery({ totalSold: -1 }, args);
+  }
+
+  async getMostPopular(args: { page: number; size: number }) {
+    return this.paginatedQuery({ viewCount: -1 }, args);
+  }
+
+  async getTopRated(args: { page: number; size: number }) {
+    return this.paginatedQuery({ averageRating: -1, reviewCount: -1 }, args);
+  }
+
+  // ─── Per pet-category getters ─────────────────────────────────────────────
+  //
+  // Each method is a thin wrapper around paginatedCategoryQuery so adding a
+  // new pet category only requires one line here.
+
+  private async paginatedCategoryQuery(
+    filter: Record<string, any>,
+    { page, size }: { page: number; size: number },
+  ) {
     const skip = (page - 1) * size;
-    const filter = { inStock: { $gt: 0 } };
+    const query = { inStock: { $gt: 0 }, ...filter };
 
     const [products, total] = await Promise.all([
-      ProductModel.find(filter).sort({ totalSold: -1 }).skip(skip).limit(size),
-      ProductModel.countDocuments(filter),
+      ProductModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(size),
+      ProductModel.countDocuments(query),
     ]);
 
     return { products, total };
   }
 
-  async getMostPopular({ page, size }: { page: number; size: number }) {
-    const skip = (page - 1) * size;
-    const filter = { inStock: { $gt: 0 } };
-
-    const [products, total] = await Promise.all([
-      ProductModel.find(filter).sort({ viewCount: -1 }).skip(skip).limit(size),
-      ProductModel.countDocuments(filter),
-    ]);
-
-    return { products, total };
+  async getProductsByDogs(args: { page: number; size: number }) {
+    return this.paginatedCategoryQuery({ category: "dogs" }, args);
+  }
+  async getProductsByCats(args: { page: number; size: number }) {
+    return this.paginatedCategoryQuery({ category: "cats" }, args);
+  }
+  async getProductsByBirds(args: { page: number; size: number }) {
+    return this.paginatedCategoryQuery({ category: "birds" }, args);
+  }
+  async getProductsByFish(args: { page: number; size: number }) {
+    return this.paginatedCategoryQuery({ category: "fish" }, args);
+  }
+  async getProductsByRabbits(args: { page: number; size: number }) {
+    return this.paginatedCategoryQuery({ category: "rabbits" }, args);
+  }
+  async getProductsBySmallPets(args: { page: number; size: number }) {
+    return this.paginatedCategoryQuery({ category: "small-pets" }, args);
   }
 
-  async getTopRated({ page, size }: { page: number; size: number }) {
-    const skip = (page - 1) * size;
-    const filter = { inStock: { $gt: 0 } };
+  // ─── Per product-category getters ─────────────────────────────────────────
 
-    const [products, total] = await Promise.all([
-      ProductModel.find(filter)
-        .sort({ averageRating: -1, reviewCount: -1 })
-        .skip(skip)
-        .limit(size),
-      ProductModel.countDocuments(filter),
-    ]);
-
-    return { products, total };
+  async getProductsByFood(args: { page: number; size: number }) {
+    return this.paginatedCategoryQuery({ productCategory: "food" }, args);
   }
+  async getProductsByAccessories(args: { page: number; size: number }) {
+    return this.paginatedCategoryQuery(
+      { productCategory: "accessories" },
+      args,
+    );
+  }
+  async getProductsByHousing(args: { page: number; size: number }) {
+    return this.paginatedCategoryQuery({ productCategory: "housing" }, args);
+  }
+  async getProductsByGrooming(args: { page: number; size: number }) {
+    return this.paginatedCategoryQuery({ productCategory: "grooming" }, args);
+  }
+  async getProductsByToys(args: { page: number; size: number }) {
+    return this.paginatedCategoryQuery({ productCategory: "toys" }, args);
+  }
+  async getProductsByHealthCare(args: { page: number; size: number }) {
+    return this.paginatedCategoryQuery(
+      { productCategory: "health-care" },
+      args,
+    );
+  }
+
+  // ─── Interactions ─────────────────────────────────────────────────────────
 
   async rateProduct({
     productId,
@@ -194,18 +360,18 @@ export class ProductRepository implements IProductRepository {
     const product = await ProductModel.findById(productId);
     if (!product) return null;
 
-    // if user already rated -> update it, else push new
-    const existing = product.ratings?.find(
+    product.ratings = product.ratings || [];
+
+    const existing = product.ratings.find(
       (r: any) => String(r.userId) === String(userId),
     );
+
     if (existing) {
       existing.rating = rating;
     } else {
-      product.ratings = product.ratings || [];
       product.ratings.push({ userId, rating } as any);
     }
 
-    // recompute average + count
     const total = product.ratings.reduce(
       (sum: number, r: any) => sum + Number(r.rating || 0),
       0,
@@ -235,6 +401,7 @@ export class ProductRepository implements IProductRepository {
     const idx = product.favorites.findIndex(
       (id: any) => String(id) === String(userId),
     );
+
     if (idx >= 0) product.favorites.splice(idx, 1);
     else product.favorites.push(userId as any);
 
@@ -245,34 +412,31 @@ export class ProductRepository implements IProductRepository {
   async addComment({
     productId,
     userId,
+    username, // 👈 now required
     comment,
   }: {
     productId: string;
     userId: string;
+    username: string;
     comment: string;
   }): Promise<ProductDoc | null> {
     const product = await ProductModel.findById(productId);
     if (!product) return null;
 
     product.comments = product.comments || [];
-
-    product.comments.push({
-      userId,
-      comment,
-    } as any);
+    product.comments.push({ userId, username, comment } as any);
 
     await product.save();
 
-    // return populated version
     return await ProductModel.findById(productId)
       .populate("comments.userId", "username")
       .populate("ratings.userId", "username");
   }
-  async getUserFavorites(userId: string) {
-    return ProductModel.find({
-      favorites: userId,
-    }).sort({ createdAt: -1 });
+
+  async getUserFavorites(userId: string): Promise<ProductDoc[]> {
+    return ProductModel.find({ favorites: userId }).sort({ createdAt: -1 });
   }
+
   async getProductComments(productId: string) {
     const product = await ProductModel.findById(productId)
       .select("comments")

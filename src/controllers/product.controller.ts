@@ -17,6 +17,7 @@ interface QueryParams {
   size?: string;
   search?: string;
   category?: string;
+  productCategory?: string; // 👈 added
 }
 
 export class ProductController {
@@ -70,8 +71,7 @@ export class ProductController {
   async getProductById(req: Request, res: Response) {
     try {
       const productId = req.params.id;
-
-      const userId = req.user?._id?.toString(); // may be undefined
+      const userId = req.user?._id?.toString();
 
       const product = await productService.getProductById(productId, userId);
 
@@ -90,13 +90,15 @@ export class ProductController {
 
   async getAllProducts(req: Request, res: Response) {
     try {
-      const { page, size, search, category }: QueryParams = req.query;
+      const { page, size, search, category, productCategory }: QueryParams =
+        req.query; // 👈 added productCategory
 
       const products = await productService.getAllProducts({
         page,
         size,
         search,
         category,
+        productCategory, // 👈 added
       });
 
       return res.status(200).json({
@@ -131,111 +133,393 @@ export class ProductController {
     }
   }
 
-  // recently added
-  async getRecentlyAdded(req: Request, res: Response) {
+  async getProductsByProductCategory(req: Request, res: Response) {
     try {
-      const page = Number(req.query.page ?? 1);
-      const size = Number(req.query.size ?? 10);
-
-      const result = await productService.getRecentlyAdded(page, size);
+      const products = await productService.getProductsByProductCategory(
+        req.params.productCategory,
+      );
 
       return res.status(200).json({
         success: true,
-        message: "Recently added products fetched successfully",
-        data: result.products,
-        pagination: {
-          page,
-          size,
-          total: result.total,
-          totalPages: Math.ceil(result.total / size),
-        },
+        message: "Products fetched successfully",
+        data: products,
       });
     } catch (error: any) {
       return res.status(error.statusCode ?? 500).json({
         success: false,
         message: error.message || "Internal Server Error",
       });
+    }
+  }
+
+  // ── Per pet-category ───────────────────────────────────────────────────────
+
+  private paginationParams(req: Request) {
+    return {
+      page: Number(req.query.page ?? 1),
+      size: Number(req.query.size ?? 10),
+    };
+  }
+
+  private paginatedResponse(
+    res: Response,
+    message: string,
+    result: { products: any[]; total: number },
+    page: number,
+    size: number,
+  ) {
+    return res.status(200).json({
+      success: true,
+      message,
+      data: result.products,
+      pagination: {
+        page,
+        size,
+        total: result.total,
+        totalPages: Math.ceil(result.total / size),
+      },
+    });
+  }
+
+  async getProductsByDogs(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getProductsByDogs(page, size);
+      return this.paginatedResponse(
+        res,
+        "Dogs products fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
+    }
+  }
+
+  async getProductsByCats(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getProductsByCats(page, size);
+      return this.paginatedResponse(
+        res,
+        "Cats products fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
+    }
+  }
+
+  async getProductsByBirds(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getProductsByBirds(page, size);
+      return this.paginatedResponse(
+        res,
+        "Birds products fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
+    }
+  }
+
+  async getProductsByFish(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getProductsByFish(page, size);
+      return this.paginatedResponse(
+        res,
+        "Fish products fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
+    }
+  }
+
+  async getProductsByRabbits(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getProductsByRabbits(page, size);
+      return this.paginatedResponse(
+        res,
+        "Rabbits products fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
+    }
+  }
+
+  async getProductsBySmallPets(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getProductsBySmallPets(page, size);
+      return this.paginatedResponse(
+        res,
+        "Small pets products fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
+    }
+  }
+
+  // ── Per product-category ───────────────────────────────────────────────────
+
+  async getProductsByFood(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getProductsByFood(page, size);
+      return this.paginatedResponse(
+        res,
+        "Food products fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
+    }
+  }
+
+  async getProductsByAccessories(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getProductsByAccessories(page, size);
+      return this.paginatedResponse(
+        res,
+        "Accessories fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
+    }
+  }
+
+  async getProductsByHousing(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getProductsByHousing(page, size);
+      return this.paginatedResponse(
+        res,
+        "Housing products fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
+    }
+  }
+
+  async getProductsByGrooming(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getProductsByGrooming(page, size);
+      return this.paginatedResponse(
+        res,
+        "Grooming products fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
+    }
+  }
+
+  async getProductsByToys(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getProductsByToys(page, size);
+      return this.paginatedResponse(
+        res,
+        "Toys fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
+    }
+  }
+
+  async getProductsByHealthCare(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getProductsByHealthCare(page, size);
+      return this.paginatedResponse(
+        res,
+        "Health care products fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
+    }
+  }
+
+  // recently added
+  async getRecentlyAdded(req: Request, res: Response) {
+    try {
+      const { page, size } = this.paginationParams(req);
+      const result = await productService.getRecentlyAdded(page, size);
+      return this.paginatedResponse(
+        res,
+        "Recently added products fetched successfully",
+        result,
+        page,
+        size,
+      );
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
     }
   }
 
   // trending
   async getTrending(req: Request, res: Response) {
     try {
-      const page = Number(req.query.page ?? 1);
-      const size = Number(req.query.size ?? 10);
-
+      const { page, size } = this.paginationParams(req);
       const result = await productService.getTrending(page, size);
-
-      return res.status(200).json({
-        success: true,
-        message: "Trending products fetched successfully",
-        data: result.products,
-        pagination: {
-          page,
-          size,
-          total: result.total,
-          totalPages: Math.ceil(result.total / size),
-        },
-      });
+      return this.paginatedResponse(
+        res,
+        "Trending products fetched successfully",
+        result,
+        page,
+        size,
+      );
     } catch (error: any) {
-      return res.status(error.statusCode ?? 500).json({
-        success: false,
-        message: error.message || "Internal Server Error",
-      });
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
     }
   }
 
   // popular
   async getMostPopular(req: Request, res: Response) {
     try {
-      const page = Number(req.query.page ?? 1);
-      const size = Number(req.query.size ?? 10);
-
+      const { page, size } = this.paginationParams(req);
       const result = await productService.getMostPopular(page, size);
-
-      return res.status(200).json({
-        success: true,
-        message: "Popular products fetched successfully",
-        data: result.products,
-        pagination: {
-          page,
-          size,
-          total: result.total,
-          totalPages: Math.ceil(result.total / size),
-        },
-      });
+      return this.paginatedResponse(
+        res,
+        "Popular products fetched successfully",
+        result,
+        page,
+        size,
+      );
     } catch (error: any) {
-      return res.status(error.statusCode ?? 500).json({
-        success: false,
-        message: error.message || "Internal Server Error",
-      });
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
     }
   }
 
   // top rated
   async getTopRated(req: Request, res: Response) {
     try {
-      const page = Number(req.query.page ?? 1);
-      const size = Number(req.query.size ?? 10);
-
+      const { page, size } = this.paginationParams(req);
       const result = await productService.getTopRated(page, size);
-
-      return res.status(200).json({
-        success: true,
-        message: "Top rated products fetched successfully",
-        data: result.products,
-        pagination: {
-          page,
-          size,
-          total: result.total,
-          totalPages: Math.ceil(result.total / size),
-        },
-      });
+      return this.paginatedResponse(
+        res,
+        "Top rated products fetched successfully",
+        result,
+        page,
+        size,
+      );
     } catch (error: any) {
-      return res.status(error.statusCode ?? 500).json({
-        success: false,
-        message: error.message || "Internal Server Error",
-      });
+      return res
+        .status(error.statusCode ?? 500)
+        .json({
+          success: false,
+          message: error.message || "Internal Server Error",
+        });
     }
   }
 
@@ -266,7 +550,6 @@ export class ProductController {
       }
 
       const files = (req as any).files as Express.Multer.File[] | undefined;
-
       if (files?.length) {
         const newImages = files.map((f) => `/uploads/${f.filename}`);
         parsedData.data.existingImages = [
@@ -409,10 +692,9 @@ export class ProductController {
   }
 
   // ======================================================
-  // ✅ NEW: RATING / FAVORITE / COMMENT (USER)
+  // RATING / FAVORITE / COMMENT (USER)
   // ======================================================
 
-  // ⭐ Rate product (body: { rating: 1..5 })
   async rateProduct(req: Request, res: Response) {
     try {
       const userId = req.user?._id;
@@ -456,7 +738,6 @@ export class ProductController {
     }
   }
 
-  // ❤️ Toggle favorite (no body needed)
   async toggleFavorite(req: Request, res: Response) {
     try {
       const userId = req.user?._id;
@@ -491,7 +772,6 @@ export class ProductController {
     }
   }
 
-  // 💬 Add comment (body: { comment: "..." })
   async addComment(req: Request, res: Response) {
     try {
       const userId = req.user?._id;
@@ -516,9 +796,17 @@ export class ProductController {
         });
       }
 
+      const username = req.user?.username; // 👈 pulled from authenticated user
+      if (!username) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Unauthorized" });
+      }
+
       const updated = await productService.addComment(
         productId,
         userId.toString(),
+        username, // 👈 passed to service
         parsed.data.comment,
       );
 
@@ -534,15 +822,15 @@ export class ProductController {
       });
     }
   }
+
   // ---------------- USER FAVORITES ----------------
   async getUserFavorites(req: Request, res: Response) {
     try {
       const userId = req.user?._id;
       if (!userId) {
-        return res.status(401).json({
-          success: false,
-          message: "Unauthorized",
-        });
+        return res
+          .status(401)
+          .json({ success: false, message: "Unauthorized" });
       }
 
       const products = await productService.getUserFavorites(userId.toString());
@@ -559,16 +847,16 @@ export class ProductController {
       });
     }
   }
+
   // ---------------- GET COMMENTS (PUBLIC) ----------------
   async getProductComments(req: Request, res: Response) {
     try {
       const productId = req.params.id;
 
       if (!mongoose.Types.ObjectId.isValid(productId)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid product id",
-        });
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid product id" });
       }
 
       const comments = await productService.getProductComments(productId);
