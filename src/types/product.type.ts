@@ -35,7 +35,7 @@ const CommentSchema = z.object({
 // ─── Category-specific attribute schemas ─────────────────────────────────────
 
 /** Only required for "food" */
-const FoodAttributesSchema = z.object({
+export const FoodAttributesSchema = z.object({
   productCategory: z.literal("food"),
   nutritionalInfo: z
     .string()
@@ -80,7 +80,7 @@ export const ACCESSORY_MATERIALS = [
 export const ACCESSORY_SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
 
 /** Required for "accessories" */
-const AccessoryAttributesSchema = z.object({
+export const AccessoryAttributesSchema = z.object({
   productCategory: z.literal("accessories"),
   pattern: z.enum(ACCESSORY_PATTERNS, {
     message: "Pattern is required for accessories",
@@ -119,7 +119,7 @@ export const TOY_MATERIALS = [
 export const TOY_SIZES = ACCESSORY_SIZES;
 
 /** Required for "toys" */
-const ToyAttributesSchema = z.object({
+export const ToyAttributesSchema = z.object({
   productCategory: z.literal("toys"),
   pattern: z.enum(TOY_PATTERNS, { message: "Pattern is required for toys" }),
   colors: z.array(z.enum(TOY_COLORS)).min(1, "At least one color is required"),
@@ -201,7 +201,7 @@ export type CategoryAttributes = z.infer<typeof CategoryAttributesSchema>;
 
 // ─── Base product fields (shared across ALL categories) ───────────────────────
 
-const BaseProductSchema = z.object({
+export const BaseProductSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   price: z.coerce.number().positive("Price must be greater than 0"),
