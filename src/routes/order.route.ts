@@ -37,7 +37,11 @@ router.post(
   authorizedMiddleware,
   controller.reorder.bind(controller),
 );
-
+router.post(
+  "/buy-now",
+  authorizedMiddleware,
+  controller.buyNow.bind(controller),
+);
 // admin assign driver
 router.patch(
   "/:id/assign-driver",

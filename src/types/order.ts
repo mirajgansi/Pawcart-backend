@@ -88,6 +88,15 @@ export const UpdateOrderStatusSchema = z
       });
     }
   });
+export const BuyNowSchema = z.object({
+  productId: z.string().min(1, "productId is required"),
+  quantity: z.coerce.number().int().min(1, "Quantity must be at least 1"),
+  shippingFee: z.coerce.number().min(0).optional(),
+  shippingAddress: ShippingAddressSchema.optional(),
+  notes: z.string().max(500).optional(),
+});
+
+export type BuyNowType = z.infer<typeof BuyNowSchema>;
 
 export const ReorderSchema = z.object({
   // Optionally override shipping address, otherwise reuses original

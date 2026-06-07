@@ -8,7 +8,7 @@ import { OrderRepository } from "../repositories/order.repository";
 import { UserRepository } from "../repositories/user.repository";
 import { UserModel } from "../models/user.model";
 import { NotificationService } from "./notification.service";
-import { ReorderType } from "../types/order";
+import { BuyNowType, ReorderType } from "../types/order";
 
 type CreateOrderInput = {
   shippingFee?: number;
@@ -546,5 +546,81 @@ export class OrderService {
     ]);
 
     return newOrder;
+  }
+  async buyNow(userId: string, input: BuyNowType) {
+    if (!userId) throw new HttpError(401, "Unauthorized");
+
+    if (!mongoose.Types.ObjectId.isValid(input.productId)) {
+      throw new HttpError(400, "Invalid productId");
+    }
+
+    const session = await mongoose.startSession();
+
+    try {
+      const result = await session.withTransaction(async () => {
+        // 1. Load product
+        const product = await ProductModel.findById(input.productId).session(
+          session,
+        );
+        if (!product) throw new HttpError(404, "Product not found");
+
+        const qty = input.quantity;
+
+        // 2. Stock check
+        if ((product.inStock ?? 0) < qty) {
+          throw new HttpError(400, `Not enough stock for ${product.name}`);
+        }
+
+        const price = Number(product.price) || 0;
+        const lineTotal = price * qty;
+        const subtotal = lineTotal;
+        const shippingFee = Number(input.shippingFee ?? 0);
+        const total = subtotal + shippingFee;
+
+        // 3. Deduct stock
+        const updateRes = await ProductModel.updateOne(
+          { _id: product._id, inStock: { $gte: qty } },
+          { $inc: { inStock: -qty } },
+          { session },
+        );
+
+        if (updateRes.modifiedCount !== 1) {
+          throw new HttpError(400, `Stock update failed for ${product.name}`);
+        }
+
+        // 4. Create order with single item snapshot
+        const [order] = await OrderModel.create(
+          [
+            {
+              userId: new Types.ObjectId(userId),
+              items: [
+                {
+                  productId: product._id,
+                  name: product.name,
+                  price,
+                  image: product.image,
+                  quantity: qty,
+                  lineTotal,
+                },
+              ],
+              subtotal,
+              shippingFee,
+              total,
+              status: "pending",
+              paymentStatus: "unpaid",
+              shippingAddress: input.shippingAddress,
+              notes: input.notes,
+            },
+          ],
+          { session },
+        );
+
+        return order;
+      });
+
+      return result;
+    } finally {
+      session.endSession();
+    }
   }
 }

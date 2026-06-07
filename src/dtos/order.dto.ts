@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { OrderSchema, OrderStatusSchema, ReorderSchema } from "../types/order";
+import {
+  BuyNowSchema,
+  OrderSchema,
+  OrderStatusSchema,
+  ReorderSchema,
+} from "../types/order";
 
 export const CreateOrderDto = OrderSchema.pick({
   shippingFee: true,
@@ -32,6 +37,8 @@ export const UpdateOrderStatusDto = z
     // optional: prevent driverId on cancelled/pending if you want
     // if (data.status === "cancelled" && data.driverId) { ... }
   });
+export const BuyNowDto = BuyNowSchema;
+export type BuyNowDto = z.infer<typeof BuyNowDto>;
 export const ReorderDto = ReorderSchema;
 export type ReorderDto = z.infer<typeof ReorderDto>;
 
