@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import { OrderService } from "../services/order.service";
 import { AssignDriverDto, UpdateOrderStatusDto } from "../dtos/order.dto";
 import { HttpError } from "../errors/http-error";
+import z from "zod";
+import { ReorderSchema } from "../types/order";
 
 const orderService = new OrderService();
 
@@ -232,6 +234,38 @@ export class OrderController {
         success: false,
         message: error.message || "Internal Server Error",
       });
+    }
+  }
+  async reorder(req: Request, res: Response) {
+    try {
+      const userId = req.user?._id;
+      if (!userId)
+        return res
+          .status(401)
+          .json({ success: false, message: "Unauthorized" });
+
+      const parsed = ReorderSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res
+          .status(400)
+          .json({ success: false, message: z.prettifyError(parsed.error) });
+      }
+
+      const result = await orderService.reorder(
+        req.params.id,
+        userId.toString(),
+        parsed.data,
+      );
+
+      return res.status(201).json({
+        success: true,
+        message: "Order placed successfully",
+        data: result,
+      });
+    } catch (error: any) {
+      return res
+        .status(error.statusCode ?? 500)
+        .json({ success: false, message: error.message });
     }
   }
 }

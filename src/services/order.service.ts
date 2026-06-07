@@ -8,6 +8,7 @@ import { OrderRepository } from "../repositories/order.repository";
 import { UserRepository } from "../repositories/user.repository";
 import { UserModel } from "../models/user.model";
 import { NotificationService } from "./notification.service";
+import { ReorderType } from "../types/order";
 
 type CreateOrderInput = {
   shippingFee?: number;
@@ -493,5 +494,57 @@ export class OrderService {
     } finally {
       session.endSession();
     }
+  }
+  async reorder(orderId: string, userId: string, data: ReorderType) {
+    if (!orderId) throw new HttpError(400, "Order id is required");
+    if (!userId) throw new HttpError(401, "Unauthorized");
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      throw new HttpError(400, "Invalid order id");
+    }
+
+    // 1. Find the original order
+    const original = await OrderModel.findById(orderId);
+    if (!original) throw new HttpError(404, "Order not found");
+
+    // 2. Must belong to the requesting user
+    if (String(original.userId) !== String(userId)) {
+      throw new HttpError(403, "You cannot reorder someone else's order");
+    }
+
+    // 3. Only allow reorder of delivered or cancelled orders
+    if (!["delivered", "cancelled"].includes(original.status)) {
+      throw new HttpError(
+        400,
+        "You can only reorder a delivered or cancelled order",
+      );
+    }
+
+    // 4. Check stock for all items before creating
+    for (const it of original.items as any[]) {
+      const product = await ProductModel.findById(it.productId);
+      if (!product)
+        throw new HttpError(400, `Product "${it.name}" no longer exists`);
+      if ((product.inStock ?? 0) < it.quantity) {
+        throw new HttpError(400, `Not enough stock for "${it.name}"`);
+      }
+    }
+
+    // 5. Create new order from original snapshot
+    const [newOrder] = await OrderModel.create([
+      {
+        userId: new Types.ObjectId(userId),
+        items: original.items,
+        subtotal: original.subtotal,
+        shippingFee: original.shippingFee,
+        total: original.total,
+        status: "pending",
+        paymentStatus: "unpaid",
+        shippingAddress: data.shippingAddress ?? original.shippingAddress,
+        notes: data.notes ?? original.notes,
+      },
+    ]);
+
+    return newOrder;
   }
 }

@@ -89,6 +89,16 @@ export const UpdateOrderStatusSchema = z
     }
   });
 
+export const ReorderSchema = z.object({
+  // Optionally override shipping address, otherwise reuses original
+  shippingAddress: ShippingAddressSchema.optional(),
+
+  // Optionally override notes
+  notes: z.string().max(500).optional(),
+});
+
+export type ReorderType = z.infer<typeof ReorderSchema>;
+
 export type OrderItemType = z.infer<typeof OrderItemSchema>;
 export type ShippingAddressType = z.infer<typeof ShippingAddressSchema>;
 export type OrderStatusType = z.infer<typeof OrderStatusSchema>;

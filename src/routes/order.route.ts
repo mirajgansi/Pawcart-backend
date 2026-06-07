@@ -32,6 +32,12 @@ router.patch(
   driverMiddleware,
   controller.driverUpdateStatus.bind(controller),
 );
+router.post(
+  "/:id/reorder",
+  authorizedMiddleware,
+  controller.reorder.bind(controller),
+);
+
 // admin assign driver
 router.patch(
   "/:id/assign-driver",
